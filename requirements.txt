@@ -1,0 +1,4 @@
+mediacloud
+newspaper3k
+spacy
+gensim
