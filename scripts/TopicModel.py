@@ -6,6 +6,11 @@ from spacy.lang.en.stop_words import STOP_WORDS
 from gensim.corpora import Dictionary, MmCorpus
 from gensim.models.ldamulticore import LdaMulticore
 
+import pyLDAvis
+import pyLDAvis.gensim
+import warnings
+
+
 
 class TopicModel:
 
@@ -21,6 +26,7 @@ class TopicModel:
 
         self.trigram_dictionary_filepath = data_directory + "trigram_dict_all.dict"
         self.trigram_bow_filepath = data_directory + "trigram_bow_corpus_all.mm"
+        self.lda_model_filepath = data_directory + "lda_model_all"
 
     @staticmethod
     def punct_space(token):
@@ -100,15 +106,32 @@ class TopicModel:
                 trigram_article = " ".join(trigram_article)
                 f.write(trigram_article + '\n')
 
+    def trigram_bow_generator(self, filepath, trigram_dict):
+        for article in LineSentence(filepath):
+            yield trigram_dict.doc2bow(article)
+
     def create_LDA_model(self):
         trigram_articles = LineSentence(self.trigram_articles_filepath)
         trigram_dictionary = Dictionary(trigram_articles)
-        trigram_dictionary.filter_extremes(no_below=10, no_above=0.4)
+        print(trigram_dictionary)
+        # trigram_dictionary.filter_extremes(no_below=10, no_above=0.4)
         trigram_dictionary.compactify()
         trigram_dictionary.save(self.trigram_dictionary_filepath)
-        trigram_dictionary = Dictionary.load(self.trigram_dictionary_filepath)
-        print(trigram_dictionary)
-
+        # trigram_dictionary = Dictionary.load(self.trigram_dictionary_filepath)
+        MmCorpus.serialize(self.trigram_bow_filepath,
+                           self.trigram_bow_generator(self.trigram_articles_filepath,
+                                                      trigram_dictionary))
+        trigram_bow_corpus = MmCorpus(self.trigram_bow_filepath)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            lda = LdaMulticore(trigram_bow_corpus,
+                               num_topics=2,
+                               id2word=trigram_dictionary,
+                               workers=1)
+            for term, frequency in lda.show_topic(0):
+                print(term)
+                print(frequency)
+                print('\n\n')
 """
 I think this writes 3 seperate files, each of which contain all text from 10k files.
 """
