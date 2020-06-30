@@ -6,12 +6,7 @@ from newspaper import Article, ArticleException
 from typing import List, Mapping
 
 
-"""
-Text retrieved from: http://rss.nytimes.com/c/34625/f/640370/s/43a06cb2/sc/7/l/0L0Snytimes0N0C20A150C0A20C210Copinion0Cilyasah0Eshabazz0Ewhat0Ewould0Emalcolm0Ex0Ethink0Bhtml0Dpartner0Frss0Gemc0Frss/story01.htm
-One account. All of Google. Sign in with your Google Account
-"""
-
-class GetText:
+class GetArticles:
 
     """
     Usable text will be less than max_article_amount generally. Use a higher number than you actually want files written.
