@@ -21,7 +21,7 @@ class GetText:
         self.urls = []
         self.start_date = dt.date(2014, 1, 1)  # for API
         self.end_date = dt.date(2020, 6, 22)   # for API
-        self.csv_location = "/data/blm/blm-all-story-urls.csv"
+        self.csv_location = "../data/blm/blm-all-story-urls.csv"
 
 
     # NOT USED - API
@@ -124,7 +124,7 @@ class GetText:
             if max_file_amount == files_written:
                 break
             # files are written in format (text0, text1, ... , textn)
-            text_directory = "/data/blm/article_texts/text" + str(files_written)
+            text_directory = "../data/article_texts/text" + str(files_written)
             with open(text_directory, 'w', encoding="utf-8") as f:
                 # write url followed by the text from it.
                 f.write("Text retrieved from: " + url + '\n')
@@ -134,6 +134,6 @@ class GetText:
 
 if __name__ == '__main__':
     fetcher = GetText()
-    url_list = fetcher.get_urls_from_csv(max_urls_to_get=20000)
-    article_texts = fetcher.url_to_newspaper_text(url_list, max_article_amount=17000)
+    url_list = fetcher.get_urls_from_csv(max_urls_to_get=5)
+    article_texts = fetcher.url_to_newspaper_text(url_list, max_article_amount=5)
     fetcher.write_text_to_file(article_texts)
