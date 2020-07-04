@@ -2,27 +2,25 @@ import csv
 import mediacloud.api
 import datetime as dt
 import time
+import random
 from newspaper import Article, ArticleException
 from typing import List, Mapping
 
 
 class GetArticles:
-
     """
     Usable text will be less than max_article_amount generally. Use a higher number than you actually want files written.
 
     """
 
     def __init__(self, max_article_amount=20000):
-        self.mc = mediacloud.api.MediaCloud("1f0bd16c9099d90e518ef4d5616a44c93c46330f8065d3c2e1f9cdefe0b093fb")
-        # self.keywords = '(ferguson OR "michael brown" OR "mike brown" OR blacklivesmatter OR "black lives" OR blm OR alllivesmatter OR whitelivesmatter OR bluelivesmatter OR "eric garner" OR ericgarner OR "freddie gray" OR freddiegray OR "walter scott" OR walterscott OR "tamir rice" OR tamirrice OR "black lives matter" OR "john crawford" OR johncrawford OR "tony robinson" OR tonyrobinson OR "eric harris" OR ericharris OR "ezell ford" OR ezellford OR "akai gurley" OR akaigurley OR "kajieme powell" OR kajiemepowell OR "tanisha anderson" OR tanishaanderson OR "victor white" OR victorwhite OR "jordan baker" OR jordanbaker OR "jerame reid" OR jeramereid OR "yvette smith" OR yvettesmith OR "phillip white" OR philipwhite OR "dante parker" OR danteparker OR "mckenzie cochran" OR mckenziecochran OR "tyree woodson" OR tyreewoodson)'
-        self.keywords = 'media_id:1 AND "black lives matter"'
+        self.mc = mediacloud.api.MediaCloud("MY API KEY")
+        self.keywords = '(ferguson OR "michael brown" OR "mike brown" OR blacklivesmatter OR "black lives" OR blm OR alllivesmatter OR whitelivesmatter OR bluelivesmatter OR "eric garner" OR ericgarner OR "freddie gray" OR freddiegray OR "walter scott" OR walterscott OR "tamir rice" OR tamirrice OR "black lives matter" OR "john crawford" OR johncrawford OR "tony robinson" OR tonyrobinson OR "eric harris" OR ericharris OR "ezell ford" OR ezellford OR "akai gurley" OR akaigurley OR "kajieme powell" OR kajiemepowell OR "tanisha anderson" OR tanishaanderson OR "victor white" OR victorwhite OR "jordan baker" OR jordanbaker OR "jerame reid" OR jeramereid OR "yvette smith" OR yvettesmith OR "phillip white" OR philipwhite OR "dante parker" OR danteparker OR "mckenzie cochran" OR mckenziecochran OR "tyree woodson" OR tyreewoodson)'
         self.urls = []
         self.start_date = dt.date(2014, 1, 1)
         self.end_date = dt.date(2020, 6, 22)
         self.max_article_amount = max_article_amount
-        self.csv_location = "E:\\black-lives-matter-all-story-urls-20200622021606.csv"
-
+        self.csv_location = "../data/blm/blm-all-story-urls.csv"
 
     def article_count(self) -> int:
         date_range = self.mc.dates_as_query_clause(self.start_date, self.end_date)  # default is start & end inclusive
@@ -30,23 +28,32 @@ class GetArticles:
                                  date_range)  # "publish_date:[2014-01-01T00:00:00Z TO 2020-06-06T00:00:00Z]")
         return res["count"]  # Get the articles that match keywords/dates
 
-    def get_article_data_from_api(self, fetch_size=1000):
-        # most amount of articles per query is 1000
+    def get_article_data_from_api(self, max_article_amount, fetch_size=1000):
+        """
+        Requests data from the Mediacloud API.
+        Returns a list of the data (URL, Date, Name... ETC) from each article.
+
+        max_article_amount is number of articles to get
+        fetch_size is how many articles to get with each API call
+
+        fetch_size and max_article_amount aren't consistent with each other.
+        EG: If fetch_size = 1000, and max_article_amount = 5, 1000 articles are retrieved.
+        """
         article_data = []
         new_id = 0
         print("fetching article data from media cloud")
-        # run until either all stories are gotten or "max_articles" number of articles are found
-        while len(article_data) < self.max_article_amount:
+        # run until either all stories are gotten or "max_article_amount" number of articles are gotten.
+        while len(article_data) < max_article_amount:
             # Make the API request
-            time.sleep(.5)
-            old_id = new_id
+            time.sleep(.5)  # Pause script to reduce chance of us getting blacklisted for too many requests.
             fetched_stories = self.mc.storyList(self.keywords, rows=fetch_size,
-                                                solr_filter="publish_date:[2014-01-01T00:00:00Z TO 2020-06-20T00:00:00Z]",
-                                                last_processed_stories_id=new_id,  # continue from the last article
-                                                )
+                                           solr_filter="publish_date:[2014-01-01T00:00:00Z TO 2020-06-20T00:00:00Z]",
+                                           last_processed_stories_id=new_id,  # continue from the last article
+                                           )
             article_data.extend(fetched_stories)
-            new_id = article_data[-1]["processed_stories_id"]  # set the last article
-            if new_id == old_id:
+            old_id = new_id  #
+            new_id = article_data[-1]["processed_stories_id"]  # set a bookmark to the last article
+            if new_id == old_id:  # if all articles of the given keywords have been retrieved.
                 break
         return article_data
 
@@ -65,11 +72,15 @@ class GetArticles:
         urls = []
         count = 0
         with open(self.csv_location, encoding="utf-8") as csv_file:
-            next(csv_file)  # skip first line
-            reader = csv.reader(csv_file, delimiter=',')
+            reader = list(csv.reader(csv_file, delimiter=','))
+            # Retrieve random file since they are stored in chronological order
+            random.shuffle(reader)
             for line in reader:
                 urls.append(line[3])
                 count += 1
+                if count == self.max_article_amount:
+                    break
+        print(urls)
         return urls
 
     # returns mapping of article url->text from url
@@ -126,13 +137,13 @@ class GetArticles:
             files_written += 1
         print("Done. {} texts have been written to files.".format(files_written))
 
-# RNyJP&68x
+
 
 if __name__ == '__main__':
-    fetcher = GetText(max_article_amount=20000)
-    article_data = fetcher.get_article_data_from_api()
+    fetcher = GetArticles(max_article_amount=20000)
+    # article_data = fetcher.get_article_data_from_api(5)
     url_list = fetcher.get_urls_from_csv()
-    # url_list = fetcher.get_urls_from_api(article_data)
-    article_texts = fetcher.url_to_newspaper_text(url_list)
-    fetcher.write_text_to_file(article_texts)
-    # urls = (articleFetcher.get_article_urls(article_data))
+    # # url_list = fetcher.get_urls_from_api(article_data)
+    # article_texts = fetcher.url_to_newspaper_text(url_list)
+    # fetcher.write_text_to_file(article_texts)
+    # # urls = (articleFetcher.get_article_urls(article_data))
