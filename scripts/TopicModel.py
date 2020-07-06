@@ -17,16 +17,19 @@ class TopicModel:
 
     def __init__(self, data_directory):
         self.nlp = spacy.load('en_core_web_sm')
+
         self.unigram_sentences_filepath = data_directory + "unigram_sentences_all.txt"
         self.bigram_model_filepath = data_directory + "bigram_model_all"
         self.bigram_sentences_filepath = data_directory + "bigram_sentences_all.txt"
         self.trigram_model_filepath = data_directory + "trigram_model_all"
         self.trigram_sentences_filepath = data_directory + "trigram_sentences_all.txt"
         self.trigram_articles_filepath = data_directory + "trigram_transformed_articles_all.txt"
-
         self.trigram_dictionary_filepath = data_directory + "trigram_dict_all.dict"
         self.trigram_bow_filepath = data_directory + "trigram_bow_corpus_all.mm"
+
         self.lda_model_filepath = data_directory + "lda_model_all"
+        self.LDAvis_data_filepath = data_directory + "ldavis_prepared"
+
 
     @staticmethod
     def punct_space(token):
@@ -113,7 +116,6 @@ class TopicModel:
     def create_LDA_model(self):
         trigram_articles = LineSentence(self.trigram_articles_filepath)
         trigram_dictionary = Dictionary(trigram_articles)
-        print(trigram_dictionary)
         # trigram_dictionary.filter_extremes(no_below=10, no_above=0.4)
         trigram_dictionary.compactify()
         trigram_dictionary.save(self.trigram_dictionary_filepath)
@@ -125,19 +127,28 @@ class TopicModel:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             lda = LdaMulticore(trigram_bow_corpus,
-                               num_topics=2,
+                               num_topics=20,
                                id2word=trigram_dictionary,
                                workers=1)
-            for term, frequency in lda.show_topic(0):
-                print(term)
-                print(frequency)
-                print('\n\n')
-"""
-I think this writes 3 seperate files, each of which contain all text from 10k files.
-"""
+        lda.save(self.lda_model_filepath)
+
+    def explore_topic(self, topic_number, topn=20):
+        lda = LdaMulticore.load(self.lda_model_filepath)
+        """
+        accept a user-supplied topic number and
+        print out a formatted list of the top terms
+        """
+        print("{:20} {} \n".format("term", "frequency"))
+        for term, frequency in lda.show_topic(topic_number, topn):
+            print("{:20} {:.3f}".format(term, round(frequency, 5)))
+
+    def display_data(self):
+        pass
+
+
 if __name__ == '__main__':
     model = TopicModel("../data/spacy_gensim_data/")
     model.write_all_article_sentences()
     model.get_trigrams()
     model.create_LDA_model()
-    c = 0
+    model.explore_topic(0)

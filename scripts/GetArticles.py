@@ -24,7 +24,7 @@ class GetText:
         self.csv_location = "../data/blm/blm-all-story-urls.csv"
 
 
-    # NOT USED - API
+        # NOT USED - API
     def article_count(self) -> int:
         date_range = self.mc.dates_as_query_clause(self.start_date, self.end_date)  # default is start & end inclusive
         res = self.mc.storyCount(self.keywords,
@@ -72,15 +72,17 @@ class GetText:
             # Get files randomly since they are stored in chronological order
             random.shuffle(reader)
             for line in reader:
-                urls.append(line[3])
-                url_count += 1
+                if line[4] == "en":
+                    urls.append(line[3])
+                    url_count += 1
                 if url_count == max_urls_to_get:
                     break
         print("{} urls were retrieved".format(len(urls)))
         return urls
 
     # returns mapping of article url->text from url
-    def url_to_newspaper_text(self, urls: List[str], max_article_amount) -> Mapping[str, str]:
+    @staticmethod
+    def url_to_newspaper_text(urls: List[str], max_article_amount) -> Mapping[str, str]:
         url_to_text = {}
         article_count = 0
         print("getting text from urls")
@@ -134,6 +136,6 @@ class GetText:
 
 if __name__ == '__main__':
     fetcher = GetText()
-    url_list = fetcher.get_urls_from_csv(max_urls_to_get=5)
-    article_texts = fetcher.url_to_newspaper_text(url_list, max_article_amount=5)
+    url_list = fetcher.get_urls_from_csv(max_urls_to_get=20000)
+    article_texts = fetcher.url_to_newspaper_text(url_list, max_article_amount=17000)
     fetcher.write_text_to_file(article_texts)
