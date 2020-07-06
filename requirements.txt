@@ -3,4 +3,4 @@ newspaper3k
 spacy
 gensim
 pyLDAvis
-cPickle
+ipython

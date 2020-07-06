@@ -1,15 +1,14 @@
-import spacy
-import os
 from gensim.models import Phrases
 from gensim.models.word2vec import LineSentence
 from spacy.lang.en.stop_words import STOP_WORDS
 from gensim.corpora import Dictionary, MmCorpus
 from gensim.models.ldamulticore import LdaMulticore
 
+import spacy
 import pyLDAvis
 import pyLDAvis.gensim
 import warnings
-
+import json
 
 
 class TopicModel:
@@ -24,7 +23,7 @@ class TopicModel:
         self.trigram_model_filepath = data_directory + "trigram_model_all"
         self.trigram_sentences_filepath = data_directory + "trigram_sentences_all.txt"
         self.trigram_articles_filepath = data_directory + "trigram_transformed_articles_all.txt"
-        self.trigram_dictionary_filepath = data_directory + "trigram_dict_all.dict"
+        self.trigram_dictionary_filepath = data_directory + "trigram_dict_all.txt"
         self.trigram_bow_filepath = data_directory + "trigram_bow_corpus_all.mm"
 
         self.lda_model_filepath = data_directory + "lda_model_all"
@@ -118,7 +117,7 @@ class TopicModel:
         trigram_dictionary = Dictionary(trigram_articles)
         # trigram_dictionary.filter_extremes(no_below=10, no_above=0.4)
         trigram_dictionary.compactify()
-        trigram_dictionary.save(self.trigram_dictionary_filepath)
+        trigram_dictionary.save_as_text(self.trigram_dictionary_filepath)
         # trigram_dictionary = Dictionary.load(self.trigram_dictionary_filepath)
         MmCorpus.serialize(self.trigram_bow_filepath,
                            self.trigram_bow_generator(self.trigram_articles_filepath,
@@ -129,7 +128,7 @@ class TopicModel:
             lda = LdaMulticore(trigram_bow_corpus,
                                num_topics=20,
                                id2word=trigram_dictionary,
-                               workers=1)
+                               workers=3)
         lda.save(self.lda_model_filepath)
 
     def explore_topic(self, topic_number, topn=20):
@@ -140,10 +139,21 @@ class TopicModel:
         """
         print("{:20} {} \n".format("term", "frequency"))
         for term, frequency in lda.show_topic(topic_number, topn):
-            print("{:20} {:.3f}".format(term, round(frequency, 5)))
+            print("{:20} {:.5f}".format(term, frequency))
 
     def display_data(self):
-        pass
+        lda = LdaMulticore.load(self.lda_model_filepath)
+        trigram_bow_corpus = MmCorpus(self.trigram_bow_filepath)
+        trigram_dictionary = Dictionary.load_from_text(self.trigram_dictionary_filepath)
+        LDAvis_prepared = pyLDAvis.gensim.prepare(lda, trigram_bow_corpus,
+                                                  trigram_dictionary)
+        with open(self.LDAvis_data_filepath, 'w') as f:
+            f.write(str(LDAvis_prepared))
+            # json.dump(LDAvis_prepared.to_json(), f)
+        with open(self.LDAvis_data_filepath) as f:
+            LDAvis_prepared = f
+        print(pyLDAvis.display(LDAvis_prepared).data)
+        return pyLDAvis.display(LDAvis_prepared)
 
 
 if __name__ == '__main__':
@@ -152,3 +162,4 @@ if __name__ == '__main__':
     model.get_trigrams()
     model.create_LDA_model()
     model.explore_topic(0)
+    model.display_data()
