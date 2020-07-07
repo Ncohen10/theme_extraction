@@ -3,16 +3,15 @@ from gensim.models.word2vec import LineSentence
 from spacy.lang.en.stop_words import STOP_WORDS
 from gensim.corpora import Dictionary, MmCorpus
 from gensim.models.ldamulticore import LdaMulticore
+from IPython.core.display import display, HTML, Javascript
 
 import spacy
 import pyLDAvis
 import pyLDAvis.gensim
 import warnings
-import json
 
 
 class TopicModel:
-
 
     def __init__(self, data_directory):
         self.nlp = spacy.load('en_core_web_sm')
@@ -29,7 +28,6 @@ class TopicModel:
         self.lda_model_filepath = data_directory + "lda_model_all"
         self.LDAvis_data_filepath = data_directory + "ldavis_prepared"
 
-
     @staticmethod
     def punct_space(token):
         """
@@ -38,7 +36,8 @@ class TopicModel:
         """
         return token.is_punct or token.is_space
 
-    def line_article(self, article_dir, article_to_parse=3):
+    @staticmethod
+    def line_article(article_dir, article_to_parse=10000):
         for article_num in range(article_to_parse):
             cur_article = article_dir + "/text" + str(article_num)
             with open(cur_article, encoding="utf-8") as f:
@@ -46,7 +45,7 @@ class TopicModel:
                 for line in f:
                     yield line.replace('\\n', '\n')
 
-    def sentence_generator(self, article_dir, articles_to_parse=3):
+    def sentence_generator(self, article_dir, articles_to_parse=10000):
         """
         Generator function that yields each sentence in all text files.
         """
@@ -108,14 +107,15 @@ class TopicModel:
                 trigram_article = " ".join(trigram_article)
                 f.write(trigram_article + '\n')
 
-    def trigram_bow_generator(self, filepath, trigram_dict):
+    @staticmethod
+    def trigram_bow_generator(filepath, trigram_dict):
         for article in LineSentence(filepath):
             yield trigram_dict.doc2bow(article)
 
     def create_LDA_model(self):
         trigram_articles = LineSentence(self.trigram_articles_filepath)
         trigram_dictionary = Dictionary(trigram_articles)
-        # trigram_dictionary.filter_extremes(no_below=10, no_above=0.4)
+        trigram_dictionary.filter_extremes(no_below=10, no_above=0.4)
         trigram_dictionary.compactify()
         trigram_dictionary.save_as_text(self.trigram_dictionary_filepath)
         # trigram_dictionary = Dictionary.load(self.trigram_dictionary_filepath)
@@ -123,6 +123,7 @@ class TopicModel:
                            self.trigram_bow_generator(self.trigram_articles_filepath,
                                                       trigram_dictionary))
         trigram_bow_corpus = MmCorpus(self.trigram_bow_filepath)
+        print(trigram_bow_corpus)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             lda = LdaMulticore(trigram_bow_corpus,
@@ -152,8 +153,7 @@ class TopicModel:
             # json.dump(LDAvis_prepared.to_json(), f)
         with open(self.LDAvis_data_filepath) as f:
             LDAvis_prepared = f
-        print(pyLDAvis.display(LDAvis_prepared).data)
-        return pyLDAvis.display(LDAvis_prepared)
+        pyLDAvis.display(LDAvis_prepared)
 
 
 if __name__ == '__main__':
